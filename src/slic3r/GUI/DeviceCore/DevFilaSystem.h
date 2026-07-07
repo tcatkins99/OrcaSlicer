@@ -4,11 +4,13 @@
 
 #include "DevDefs.h"
 #include "DevFilaAmsSetting.h"
+#include "DevFilaSwitch.h"
 #include "DevUtil.h"
 
 #include <map>
 #include <optional>
 #include <memory>
+#include <set>
 #include <wx/string.h>
 #include <wx/colour.h>
 
@@ -118,7 +120,8 @@ public:
  *
  * Key Properties:
  * - m_ams_id: Unique identifier for this AMS unit (string, typically "0", "1", etc.)
- * - m_ext_id: Which extruder this AMS is connected to (for multi-extruder setups)
+ * - m_binded_extruder_set: Extruder(s) this AMS can route to (for multi-extruder setups;
+ *   more than one when routed dynamically via a filament track switch)
  * - m_trays: Map of tray IDs to DevAmsTray pointers containing filament data
  *
  * AMS Type Variants:
@@ -140,8 +143,7 @@ public:
     };
 
 public:
-    DevAms(const std::string& ams_id, int extruder_id, AmsType type);
-    DevAms(const std::string& ams_id, int nozzle_id, int type);
+    DevAms(const std::string& ams_id, const std::set<int>& binded_extruder_set, int type);
     ~DevAms();
 
 public:
@@ -160,8 +162,24 @@ public:
     DevAmsTray* GetTray(const std::string& tray_id) const;
     const std::map<std::string, DevAmsTray*>& GetTrays() const { return m_trays; }
 
-    // installed on the extruder
-    int   GetExtruderId() const { return m_ext_id; }
+    // installed on the extruder(s). With a filament track switch, an AMS may be
+    // routable to more than one extruder, so this is a set rather than a single id.
+    int   GetBindedExtruderCount() const { return (int)m_binded_extruder_set.size(); }
+    std::optional<int> GetUniqueBindedExtruderId() const;
+    std::set<int> GetBindedExtruderSet() const { return m_binded_extruder_set; }
+    std::optional<DevFilaSwitch::SwitchPos> GetSwitcherPos() const { return m_binded_switcher_pos; }
+    // convenience accessor for callers that just want a single extruder id for
+    // display/grouping purposes. When bound to more than one extruder (routed via
+    // a filament track switch), disambiguate using the AMS's fixed physical switch
+    // port so that two switch-routed AMS units land on stable, distinct sides
+    // instead of both defaulting to the same one.
+    int   GetExtruderId() const
+    {
+        if (auto id = GetUniqueBindedExtruderId(); id.has_value()) return *id;
+        if (m_binded_switcher_pos.has_value())
+            return (*m_binded_switcher_pos == DevFilaSwitch::SwitchPos::POS_IN_A) ? MAIN_EXTRUDER_ID : DEPUTY_EXTRUDER_ID;
+        return MAIN_EXTRUDER_ID;
+    }
 
     // temperature and humidity
     float GetCurrentTemperature() const { return m_current_temperature; }
@@ -176,7 +194,8 @@ public:
 private:
     AmsType       m_ams_type = AmsType::AMS;
     std::string   m_ams_id;
-    int           m_ext_id;//extruder id
+    std::set<int> m_binded_extruder_set;// extruder id(s) this AMS can route to; more than one when routed via a filament track switch
+    std::optional<DevFilaSwitch::SwitchPos> m_binded_switcher_pos;// which switch input port this AMS is plugged into, if any
     bool          m_exist = false;
 
     // slots and trays

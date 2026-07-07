@@ -2249,11 +2249,15 @@ void CalibrationPresetPage::sync_ams_info(MachineObject* obj)
             bool main_done   = false;
             bool deputy_done = false;
             for (auto &ams_item : obj->GetFilaSystem()->GetAmsList()) {
-                if (ams_item.second->GetExtruderId() == 0 && !main_done) {
-                    update_multi_extruder_filament_combobox(ams_item.second->GetAmsId(), ams_item.second->GetExtruderId());
+                // an AMS routed via a filament track switch can bind to both extruders,
+                // so check membership rather than requiring a single exclusive id
+                const auto& binded_extruder_set = ams_item.second->GetBindedExtruderSet();
+                if (binded_extruder_set.count(0) && !main_done) {
+                    update_multi_extruder_filament_combobox(ams_item.second->GetAmsId(), 0);
                     main_done = true;
-                } else if (ams_item.second->GetExtruderId() == 1 && !deputy_done) {
-                    update_multi_extruder_filament_combobox(ams_item.second->GetAmsId(), ams_item.second->GetExtruderId());
+                }
+                if (binded_extruder_set.count(1) && !deputy_done) {
+                    update_multi_extruder_filament_combobox(ams_item.second->GetAmsId(), 1);
                     deputy_done = true;
                 }
             }

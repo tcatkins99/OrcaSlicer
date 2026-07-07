@@ -368,6 +368,25 @@ public:
     ~AMSextruderImage();
 };
 
+/*************************************************
+Description:Switcher
+**************************************************/
+class SwitcherImage: public wxWindow
+{
+public:
+    void setShowState(bool show_state) { m_show_state = show_state; };
+    void paintEvent(wxPaintEvent &evt);
+
+    void            render(wxDC &dc);
+    bool            m_show_state = {false};
+    wxColour        m_colour;
+    ScalableBitmap  m_switcher;
+    string m_file_name;
+    void            doRender(wxDC &dc);
+    SwitcherImage(wxWindow *parent, wxWindowID id, string file_name, const wxSize& size, const wxPoint &pos = wxDefaultPosition);
+    ~SwitcherImage();
+};
+
 //AMSExtImage upon ext lib
 class AMSExtImage : public wxWindow
 {

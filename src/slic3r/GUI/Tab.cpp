@@ -5586,6 +5586,15 @@ if (is_marlin_flavor)
 // this gets executed after preset is loaded and before GUI fields are updated
 void TabPrinter::on_preset_loaded()
 {
+    // disable dynamic filament by default; enable only when supported machine is connected
+    {
+        auto* dynamic_filament = m_preset_bundle->project_config.option<ConfigOptionBool>("enable_filament_dynamic_map");
+        if (dynamic_filament) dynamic_filament->value = false;
+
+        auto* has_switcher = m_preset_bundle->project_config.option<ConfigOptionBool>("has_filament_switcher");
+        if (has_switcher) has_switcher->value = false;
+    }
+
     // Orca
     //update nozzle_volume_type
     const Preset& current_printer = m_preset_bundle->printers.get_selected_preset();

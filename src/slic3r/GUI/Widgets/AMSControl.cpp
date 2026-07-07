@@ -12,6 +12,7 @@
 
 #include <wx/simplebook.h>
 #include <wx/dcgraph.h>
+#include <wx/artprov.h>
 
 #include <boost/log/trivial.hpp>
 
@@ -39,7 +40,7 @@ AMSControl::AMSControl(wxWindow *parent, wxWindowID id, const wxPoint &pos, cons
     SetBackgroundColour(*wxWHITE);
     // normal mode
     //Freeze();
-    wxBoxSizer *m_sizer_body = new wxBoxSizer(wxVERTICAL);
+    m_sizer_body = new wxBoxSizer(wxVERTICAL);
     m_amswin                 = new wxWindow(this, wxID_ANY);
     m_amswin->SetBackgroundColour(*wxWHITE);
     m_amswin->SetSize(wxSize(FromDIP(578), -1));
@@ -114,6 +115,7 @@ AMSControl::AMSControl(wxWindow *parent, wxWindowID id, const wxPoint &pos, cons
 
 
     m_sizer_ams_option = new wxBoxSizer(wxHORIZONTAL);
+    m_sizer_switcher_option = new wxBoxSizer(wxHORIZONTAL);
     m_sizer_option_left = new wxBoxSizer(wxHORIZONTAL);
     m_sizer_option_mid = new wxBoxSizer(wxHORIZONTAL);
     m_sizer_option_right = new wxBoxSizer(wxHORIZONTAL);
@@ -132,6 +134,10 @@ AMSControl::AMSControl(wxWindow *parent, wxWindowID id, const wxPoint &pos, cons
 
     m_panel_option_right->SetMinSize(wxSize(FromDIP(180), -1));
     m_panel_option_right->SetMaxSize(wxSize(FromDIP(180), -1));
+
+    /*option switch*/
+    m_switcher = new SwitcherImage(m_amswin, wxID_ANY, "fila_switch", wxSize(FromDIP(29), FromDIP(16)), wxDefaultPosition);
+    m_sizer_switcher_option->Add(m_switcher, 0, wxALIGN_CENTER, 0);
 
     /*option left*/
     m_button_auto_refill = new Button(m_panel_option_left, _L("Auto Refill"));
@@ -207,6 +213,7 @@ AMSControl::AMSControl(wxWindow *parent, wxWindowID id, const wxPoint &pos, cons
     m_sizer_body->Add(0, 0, 1, wxEXPAND | wxTOP, FromDIP(10));
     m_sizer_body->Add(m_sizer_ams_body, 0, wxALIGN_CENTER, 0);
     m_sizer_body->Add(m_sizer_down_road, 0, wxALIGN_CENTER, 0);
+    m_sizer_body->Add(m_sizer_switcher_option, 0, wxALIGN_CENTER, 0);
     m_sizer_body->Add(m_sizer_ams_option, 0, wxEXPAND, 0);
 
     m_amswin->SetSizer(m_sizer_body);
@@ -816,6 +823,58 @@ void AMSControl::show_vams_kn_value(bool show)
     //m_vams_lib->show_kn_value(show);
 }
 
+bool AMSControl::isFilaSwitchInstalled() const
+{
+    DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
+    if (!dev) return false;
+    MachineObject* obj = dev->get_selected_machine();
+    if (!obj) return false;
+    DevFilaSwitch* filaSwitch = obj->GetFilaSwitch();
+    return filaSwitch && filaSwitch->IsInstalled();
+}
+
+std::tuple<bool, bool> AMSControl::isFilaSwitchReady() const
+{
+    DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
+    if (!dev) return {false, false};
+    MachineObject* obj = dev->get_selected_machine();
+    if (!obj) return {false, false};
+    DevFilaSwitch* filaSwitch = obj->GetFilaSwitch();
+    if (filaSwitch) {
+        return {filaSwitch->IsInstalled(), filaSwitch->IsReady()};
+    }
+    return {false, false};
+}
+
+void AMSControl::show_switcher_status(bool show)
+{
+    if (tipPanel == nullptr)
+    {
+        m_sizer_body->Add(0, 0, 1, wxEXPAND | wxTOP, FromDIP(5));
+        tipPanel = new wxPanel(m_amswin);
+        tipPanel->SetBackgroundColour(wxColour(255, 153, 0));
+        tipSizer = new wxBoxSizer(wxHORIZONTAL);
+        tipPanel->SetSizer(tipSizer);
+        icon = new wxStaticBitmap(tipPanel, wxID_ANY,
+            wxArtProvider::GetBitmap(wxART_INFORMATION, wxART_MESSAGE_BOX, wxSize(FromDIP(16), FromDIP(16))));
+        tipSizer->Add(icon, 0, wxALL, FromDIP(8));
+        tipText = new wxStaticText(tipPanel, wxID_ANY, _L("AMS has not been initialized. Please initialize it before use."));
+        tipText->SetForegroundColour(wxColour(255, 255, 255));
+        tipText->SetFont(wxFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
+        tipText->Wrap(-1);
+        tipText->SetMinSize(wxSize(-1, -1));
+        tipSizer->Add(tipText, 0, wxALL | wxALIGN_CENTER_VERTICAL | wxEXPAND, FromDIP(8));
+        m_sizer_body->Add(tipPanel, 1, wxEXPAND, 0);
+    }
+    if (tipPanel->IsShown() == show)
+    {
+        return;
+    }
+    tipPanel->Show(show);
+    m_amswin->Layout();
+    m_amswin->Fit();
+}
+
 std::vector<AMSinfo> AMSControl::GenerateSimulateData() {
     auto caninfo0_0 = Caninfo{ "0", (""), *wxRED, AMSCanType::AMS_CAN_TYPE_VIRTUAL };
     auto caninfo0_1 = Caninfo{ "1", (""), *wxGREEN, AMSCanType::AMS_CAN_TYPE_VIRTUAL };
@@ -974,6 +1033,20 @@ void AMSControl::UpdateAms(const std::string   &series_name,
     if (m_extruder->updateNozzleNum(m_total_ext_count, series_name))
     {
         m_amswin->Layout();
+    }
+
+    /*update switch status*/
+    const auto [switch_installed, switch_ready] = isFilaSwitchReady();
+    show_switcher_status(switch_installed && !switch_ready);
+    bool show_switcher = switch_installed && m_total_ext_count >= 2;
+    if (m_switcher->IsShown() != show_switcher)
+    {
+        m_switcher->Show(show_switcher);
+        m_sizer_body->Layout();
+        m_sizer_body->Fit(this);
+        this->Layout();
+        this->Refresh(true);
+        this->Update();
     }
 }
 

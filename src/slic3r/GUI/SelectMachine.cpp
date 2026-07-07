@@ -23,6 +23,7 @@
 #include "DeviceCore/DevExtensionTool.h"
 #include "DeviceCore/DevExtruderSystem.h"
 #include "DeviceCore/DevFilaBlackList.h"
+#include "DeviceCore/DevFilaSwitch.h"
 #include "DeviceCore/DevFilaSystem.h"
 #include "DeviceCore/DevManager.h"
 #include "DeviceCore/DevMapping.h"
@@ -1038,13 +1039,15 @@ bool SelectMachineDialog::do_ams_mapping(MachineObject *obj_,bool use_ams)
 
             bool has_left_ams = false, has_right_ams = false;
             for (auto ams_item : obj_->GetFilaSystem()->GetAmsList()) {
-                if (ams_item.second->GetExtruderId() == 0) {
+                // an AMS routed via a filament track switch can bind to both extruders
+                const auto& binded_extruder_set = ams_item.second->GetBindedExtruderSet();
+                if (binded_extruder_set.count(0)) {
                     if (obj_->is_main_extruder_on_left())
                         has_left_ams = true;
                     else
                         has_right_ams = true;
                 }
-                else if (ams_item.second->GetExtruderId() == 1) {
+                if (binded_extruder_set.count(1)) {
                     if (obj_->is_main_extruder_on_left())
                         has_right_ams = true;
                     else
@@ -3941,7 +3944,8 @@ void SelectMachineDialog::reset_and_sync_ams_list()
             size_t nozzle_nums = full_config.option<ConfigOptionFloats>("nozzle_diameter")->values.size();
             if (nozzle_nums > 1)
             {
-                if (obj_ && can_hybrid_mapping(*obj_->GetExtderSystem()))
+                bool use_dynamic_switch = obj_ && obj_->GetFilaSwitch() && obj_->GetFilaSwitch()->IsInstalled();
+                if (obj_ && (can_hybrid_mapping(*obj_->GetExtderSystem()) || use_dynamic_switch))
                 {
                     m_mapping_popup.set_show_type(ShowType::LEFT_AND_RIGHT);
                 }
@@ -4454,7 +4458,8 @@ void SelectMachineDialog::set_default_from_sdcard()
                 m_mapping_popup.Move(pos);
 
                 if (diameters_count > 1) {
-                    if (obj_ && can_hybrid_mapping(*obj_->GetExtderSystem())) {
+                    bool use_dynamic_switch = obj_ && obj_->GetFilaSwitch() && obj_->GetFilaSwitch()->IsInstalled();
+                    if (obj_ && (can_hybrid_mapping(*obj_->GetExtderSystem()) || use_dynamic_switch)) {
                         m_mapping_popup.set_show_type(ShowType::LEFT_AND_RIGHT);
                     } else if (m_filaments_map[m_current_filament_id] == 1) {
                         m_mapping_popup.set_show_type(ShowType::LEFT);

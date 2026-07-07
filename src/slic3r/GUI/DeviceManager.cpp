@@ -23,6 +23,7 @@
 #include "fast_float/fast_float.h"
 
 #include "DeviceCore/DevFilaSystem.h"
+#include "DeviceCore/DevFilaSwitch.h"
 #include "DeviceCore/DevExtensionTool.h"
 #include "DeviceCore/DevExtruderSystem.h"
 #include "DeviceCore/DevNozzleSystem.h"
@@ -567,6 +568,7 @@ MachineObject::MachineObject(DeviceManager* manager, NetworkAgent* agent, std::s
         m_extension_tool = DevExtensionTool::Create(this);
         m_nozzle_system = new DevNozzleSystem(this);
         m_fila_system   = new DevFilaSystem(this);
+        m_fila_switch   = new DevFilaSwitch(this);
         m_hms_system    = new DevHMS(this);
         m_config = new DevConfig(this);
 
@@ -614,6 +616,9 @@ MachineObject::~MachineObject()
 
         delete m_fila_system;
         m_fila_system = nullptr;
+
+        delete m_fila_switch;
+        m_fila_switch = nullptr;
 
         delete m_hms_system;
         m_hms_system = nullptr;
@@ -2896,6 +2901,7 @@ int MachineObject::parse_json(std::string tunnel, std::string payload, bool key_
                 }
 
               m_fan->ParseV2_0(jj);
+              m_fila_switch->ParseFilaSwitchInfo(jj);
 
                 if (jj.contains("support_filament_backup")) {
                     if (jj["support_filament_backup"].is_boolean()) {

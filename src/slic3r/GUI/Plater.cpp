@@ -1400,13 +1400,16 @@ bool Sidebar::priv::sync_extruder_list(bool &only_external_material)
 
     int deputy_4 = 0, main_4 = 0, deputy_1 = 0, main_1 = 0;
     for (auto ams : obj->GetFilaSystem()->GetAmsList()) {
-        // Main (first) extruder at right
-        if (ams.second->GetExtruderId() == 0) {
+        // Main (first) extruder at right. An AMS routed via a filament track switch
+        // can bind to both extruders, so it counts toward both tallies.
+        const auto& binded_extruder_set = ams.second->GetBindedExtruderSet();
+        if (binded_extruder_set.count(0)) {
             if (ams.second->GetAmsType() == DevAms::N3S) // N3S
                 ++main_1;
             else
                 ++main_4;
-        } else if (ams.second->GetExtruderId() == 1) {
+        }
+        if (binded_extruder_set.count(1)) {
             if (ams.second->GetAmsType() == DevAms::N3S) // N3S
                 ++deputy_1;
             else
@@ -1558,16 +1561,20 @@ void Sidebar::priv::update_sync_status(const MachineObject *obj)
         machine_extruder_infos[extruder.GetExtId()].diameter          = extruder.GetNozzleDiameter();
     }
     for (auto &item : obj->GetFilaSystem()->GetAmsList()) {
-        if (item.second->GetExtruderId() >= machine_extruder_infos.size())
-            continue;
+        // an AMS routed via a filament track switch binds to more than one extruder;
+        // count it toward every extruder it can feed
+        for (int bound_extruder_id : item.second->GetBindedExtruderSet()) {
+            if (bound_extruder_id < 0 || bound_extruder_id >= (int)machine_extruder_infos.size())
+                continue;
 
-        if (item.second->GetAmsType() == DevAms::N3S)
-        { // N3S
-            machine_extruder_infos[item.second->GetExtruderId()].ams_1++;
-            machine_extruder_infos[item.second->GetExtruderId()].ams_v1.push_back(item.second);
-        } else {
-            machine_extruder_infos[item.second->GetExtruderId()].ams_4++;
-            machine_extruder_infos[item.second->GetExtruderId()].ams_v4.push_back(item.second);
+            if (item.second->GetAmsType() == DevAms::N3S)
+            { // N3S
+                machine_extruder_infos[bound_extruder_id].ams_1++;
+                machine_extruder_infos[bound_extruder_id].ams_v1.push_back(item.second);
+            } else {
+                machine_extruder_infos[bound_extruder_id].ams_4++;
+                machine_extruder_infos[bound_extruder_id].ams_v4.push_back(item.second);
+            }
         }
     }
 
@@ -11123,13 +11130,16 @@ bool Plater::priv::check_ams_status_impl(bool is_slice_all)
         ams_count_info.resize(2);
         int deputy_4 = 0, main_4 = 0, deputy_1 = 0, main_1 = 0;
         for (auto ams : obj->GetFilaSystem()->GetAmsList()) {
-            // Main (first) extruder at right
-            if (ams.second->GetExtruderId() == 0) {
+            // Main (first) extruder at right. An AMS routed via a filament track switch
+            // can bind to both extruders, so it counts toward both tallies.
+            const auto& binded_extruder_set = ams.second->GetBindedExtruderSet();
+            if (binded_extruder_set.count(0)) {
                 if (ams.second->GetAmsType() == DevAms::N3S) // N3S
                     ++main_1;
                 else
                     ++main_4;
-            } else if (ams.second->GetExtruderId() == 1) {
+            }
+            if (binded_extruder_set.count(1)) {
                 if (ams.second->GetAmsType() == DevAms::N3S) // N3S
                     ++deputy_1;
                 else

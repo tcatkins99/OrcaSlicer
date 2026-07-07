@@ -149,8 +149,10 @@ namespace Slic3r
                 }
 
                 //first: left,nozzle=1,map=1   second: right,nozzle=0,map=2
-                bool right_ams_valid = ams->second->GetExtruderId() == 0 && map_opt[MappingOption::USE_RIGHT_AMS];
-                bool left_ams_valid = ams->second->GetExtruderId() == 1 && map_opt[MappingOption::USE_LEFT_AMS];
+                // an AMS routed via a filament track switch can bind to both extruders
+                const auto& binded_extruder_set = ams->second->GetBindedExtruderSet();
+                bool right_ams_valid = binded_extruder_set.count(0) && map_opt[MappingOption::USE_RIGHT_AMS];
+                bool left_ams_valid = binded_extruder_set.count(1) && map_opt[MappingOption::USE_LEFT_AMS];
                 if (right_ams_valid || left_ams_valid)
                 {
                     tray_filaments.emplace(std::make_pair(tray_index, info));

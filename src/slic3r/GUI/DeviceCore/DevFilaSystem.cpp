@@ -99,19 +99,21 @@ std::string DevAmsTray::get_filament_type()
 }
 
 
-DevAms::DevAms(const std::string& ams_id, int extruder_id, AmsType type)
+DevAms::DevAms(const std::string& ams_id, const std::set<int>& binded_extruder_set, int type)
 {
     m_ams_id = ams_id;
-    m_ext_id = extruder_id;
-    m_ams_type = type;
-}
-
-DevAms::DevAms(const std::string& ams_id, int nozzle_id, int type)
-{
-    m_ams_id = ams_id;
-    m_ext_id = nozzle_id;
+    m_binded_extruder_set = binded_extruder_set;
     m_ams_type = (AmsType)type;
     assert(DUMMY < type && m_ams_type <= N3S);
+}
+
+std::optional<int> DevAms::GetUniqueBindedExtruderId() const
+{
+    if (m_binded_extruder_set.size() == 1) {
+        return *m_binded_extruder_set.begin();
+    }
+
+    return std::nullopt;
 }
 
 DevAms::~DevAms()
@@ -357,26 +359,40 @@ void DevFilaSystemParser::ParseV1_0(const json& jj, MachineObject* obj, DevFilaS
                     if (!it->contains("id")) continue;
                     std::string ams_id = (*it)["id"].get<std::string>();
 
-                    int extuder_id = MAIN_EXTRUDER_ID; // Default nozzle id
                     int type_id = 1;   // 0:dummy 1:ams 2:ams-lite 3:n3f 4:n3s
+                    std::set<int> binded_extruder_set = { MAIN_EXTRUDER_ID }; // Default nozzle id
+                    std::optional<DevFilaSwitch::SwitchPos> binded_switcher_pos;
 
                     /*ams info*/
                     if (it->contains("info")) {
                         const std::string& info = (*it)["info"].get<std::string>();
                         type_id = DevUtil::get_flag_bits(info, 0, 4);
-                        extuder_id = DevUtil::get_flag_bits(info, 8, 4);
+                        int extuder_id = DevUtil::get_flag_bits(info, 8, 4);
+
+                        /*AMS bound via a filament track switch: no single fixed nozzle*/
+                        if (extuder_id == 0xE && obj->GetFilaSwitch() && obj->GetFilaSwitch()->IsInstalled()) {
+                            int bind_switch_in = DevUtil::get_flag_bits(info, 24, 4);
+                            if (bind_switch_in == 0 || bind_switch_in == 1) {
+                                binded_extruder_set = { MAIN_EXTRUDER_ID, DEPUTY_EXTRUDER_ID };
+                            } else {
+                                binded_extruder_set.clear();
+                            }
+
+                            if (bind_switch_in == 0) {
+                                binded_switcher_pos = DevFilaSwitch::SwitchPos::POS_IN_B;
+                            } else if (bind_switch_in == 1) {
+                                binded_switcher_pos = DevFilaSwitch::SwitchPos::POS_IN_A;
+                            }
+                        } else if (extuder_id == 0xE) {
+                            /*AMS without initialization*/
+                            binded_extruder_set.clear();
+                        } else {
+                            binded_extruder_set = { extuder_id };
+                        }
                     } else {
                         if (!obj->is_enable_ams_np && obj->get_printer_ams_type() == "f1") {
                             type_id = DevAms::AMS_LITE;
                         }
-                    }
-
-                    /*AMS without initialization*/
-                    if (extuder_id == 0xE)
-                    {
-                        ams_id_set.erase(ams_id);
-                        system->amsList.erase(ams_id);
-                        continue;
                     }
 
                     ams_id_set.erase(ams_id);
@@ -384,17 +400,15 @@ void DevFilaSystemParser::ParseV1_0(const json& jj, MachineObject* obj, DevFilaS
                     auto ams_it = system->amsList.find(ams_id);
                     if (ams_it == system->amsList.end())
                     {
-                        DevAms* new_ams = new DevAms(ams_id, extuder_id, type_id);
+                        DevAms* new_ams = new DevAms(ams_id, binded_extruder_set, type_id);
                         system->amsList.insert(std::make_pair(ams_id, new_ams));
                         // new ams added event
                         curr_ams = new_ams;
                     }
                     else
                     {
-                        if (extuder_id != ams_it->second->GetExtruderId())
-                        {
-                            ams_it->second->m_ext_id = extuder_id;
-                        }
+                        ams_it->second->m_binded_extruder_set = binded_extruder_set;
+                        ams_it->second->m_binded_switcher_pos = binded_switcher_pos;
 
                         curr_ams = ams_it->second;
                     }

@@ -10,6 +10,7 @@
 
 #pragma once
 #include <string>
+#include <utility>
 
 enum PrinterArch
 {
@@ -48,6 +49,9 @@ enum AmsStatusMain
 #define VIRTUAL_AMS_DEPUTY_ID_STR "254"
 
 #define INVALID_AMS_TEMPERATURE std::numeric_limits<float>::min()
+
+// <ams_id, slot_id>
+using DevAmsSlotId = std::pair<int, int>;
 
 /* Extruder*/
 #define MAIN_EXTRUDER_ID          0

@@ -4540,8 +4540,14 @@ void StatusPanel::on_ams_refresh_rfid(wxCommandEvent &event)
 
         if (obj->is_enable_np || obj->is_enable_ams_np) {
             use_new_command = true;
-            if (it->second->GetExtruderId() < obj->GetExtderSystem()->GetTotalExtderSize()) {
-                has_filament_at_extruder = obj->GetExtderSystem()->HasFilamentInExt(it->second->GetExtruderId());
+            // an AMS routed via a filament track switch can bind to more than one
+            // extruder; conservatively treat filament as loaded if any of them has it
+            for (int bound_extruder_id : it->second->GetBindedExtruderSet()) {
+                if (bound_extruder_id < obj->GetExtderSystem()->GetTotalExtderSize() &&
+                    obj->GetExtderSystem()->HasFilamentInExt(bound_extruder_id)) {
+                    has_filament_at_extruder = true;
+                    break;
+                }
             }
         } else {
             has_filament_at_extruder = obj->is_filament_at_extruder();

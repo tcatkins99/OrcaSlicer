@@ -60,6 +60,8 @@ protected:
     wxBoxSizer* m_sizer_prv_left{nullptr};
     wxBoxSizer* m_sizer_prv_right{nullptr};
 
+    wxBoxSizer *m_sizer_body{nullptr};
+
     /*ams */
     wxBoxSizer *m_sizer_ams_body{nullptr};
     wxBoxSizer* m_sizer_ams_area_left{nullptr};
@@ -71,6 +73,14 @@ protected:
     wxBoxSizer* m_sizer_option_left{nullptr};
     wxBoxSizer* m_sizer_option_mid{nullptr};
     wxBoxSizer* m_sizer_option_right{nullptr};
+
+    /*filament track switch*/
+    SwitcherImage *m_switcher{nullptr};
+    wxBoxSizer *m_sizer_switcher_option{nullptr};
+    wxPanel *tipPanel{nullptr};
+    wxBoxSizer *tipSizer{nullptr};
+    wxStaticBitmap *icon{nullptr};
+    wxStaticText *tipText{nullptr};
 
 
     AmsIntroducePopup m_ams_introduce_popup;
@@ -165,6 +175,10 @@ public:
                    bool                 is_reset = true,
                    bool                 test     = false);
     std::vector<AMSinfo> GenerateSimulateData();
+
+    bool                   isFilaSwitchInstalled() const;
+    std::tuple<bool, bool> isFilaSwitchReady() const;
+    void                   show_switcher_status(bool show);
 
     void AddAms(AMSinfo info, AMSPanelPos pos = AMSPanelPos::LEFT_PANEL);
     //void AddExtAms(int ams_id);

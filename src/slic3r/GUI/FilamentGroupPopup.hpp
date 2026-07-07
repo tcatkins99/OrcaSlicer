@@ -7,6 +7,8 @@
 #include "libslic3r/PrintConfig.hpp"
 #include "Widgets/PopupWindow.hpp"
 #include "Widgets/Label.hpp"
+#include "Widgets/StaticBox.hpp"
+#include "Widgets/SwitchButton.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -42,6 +44,10 @@ private:
     void Init();
     void UpdateButtonStatus(int hover_idx = -1);
     void DrawRoundedCorner(int radius);
+
+    void MakeSmartFilamentSection(wxSizer *top_sizer, int horizontal_margin, int vertical_padding);
+    void OnSmartFilamentToggle(wxCommandEvent &event);
+    void UpdateSmartFilamentSection();
 private:
     FilamentMapMode GetFilamentMapMode() const;
     void SetFilamentMapMode(const FilamentMapMode mode);
@@ -74,6 +80,11 @@ private:
 
     wxStaticText *wiki_link;
     wxStaticText *video_link;
+
+    // smart filament (dynamic map via filament track switch)
+    StaticBox    *m_smart_filament_panel{nullptr};
+    wxSizerItem  *m_smart_filament_spacer{nullptr};
+    SwitchButton *m_smart_filament_switch{nullptr};
 
     PartPlate* partplate_ref{ nullptr };
     Plater* plater_ref{ nullptr };
