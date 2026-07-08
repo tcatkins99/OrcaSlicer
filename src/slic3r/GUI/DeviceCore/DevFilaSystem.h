@@ -177,7 +177,7 @@ public:
     {
         if (auto id = GetUniqueBindedExtruderId(); id.has_value()) return *id;
         if (m_binded_switcher_pos.has_value())
-            return (*m_binded_switcher_pos == DevFilaSwitch::SwitchPos::POS_IN_A) ? MAIN_EXTRUDER_ID : DEPUTY_EXTRUDER_ID;
+            return (*m_binded_switcher_pos == DevFilaSwitch::SwitchPos::POS_IN_A) ? DEPUTY_EXTRUDER_ID : MAIN_EXTRUDER_ID;
         return MAIN_EXTRUDER_ID;
     }
 
