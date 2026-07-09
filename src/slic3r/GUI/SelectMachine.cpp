@@ -23,7 +23,6 @@
 #include "DeviceCore/DevExtensionTool.h"
 #include "DeviceCore/DevExtruderSystem.h"
 #include "DeviceCore/DevFilaBlackList.h"
-#include "DeviceCore/DevFilaSwitch.h"
 #include "DeviceCore/DevFilaSystem.h"
 #include "DeviceCore/DevManager.h"
 #include "DeviceCore/DevMapping.h"
@@ -3944,7 +3943,7 @@ void SelectMachineDialog::reset_and_sync_ams_list()
             size_t nozzle_nums = full_config.option<ConfigOptionFloats>("nozzle_diameter")->values.size();
             if (nozzle_nums > 1)
             {
-                bool use_dynamic_switch = obj_ && obj_->GetFilaSwitch() && obj_->GetFilaSwitch()->IsInstalled();
+                bool use_dynamic_switch = obj_ && obj_->IsFilaSwitchInstalled();
                 if (obj_ && (can_hybrid_mapping(*obj_->GetExtderSystem()) || use_dynamic_switch))
                 {
                     m_mapping_popup.set_show_type(ShowType::LEFT_AND_RIGHT);
@@ -4458,7 +4457,7 @@ void SelectMachineDialog::set_default_from_sdcard()
                 m_mapping_popup.Move(pos);
 
                 if (diameters_count > 1) {
-                    bool use_dynamic_switch = obj_ && obj_->GetFilaSwitch() && obj_->GetFilaSwitch()->IsInstalled();
+                    bool use_dynamic_switch = obj_ && obj_->IsFilaSwitchInstalled();
                     if (obj_ && (can_hybrid_mapping(*obj_->GetExtderSystem()) || use_dynamic_switch)) {
                         m_mapping_popup.set_show_type(ShowType::LEFT_AND_RIGHT);
                     } else if (m_filaments_map[m_current_filament_id] == 1) {

@@ -829,8 +829,7 @@ bool AMSControl::isFilaSwitchInstalled() const
     if (!dev) return false;
     MachineObject* obj = dev->get_selected_machine();
     if (!obj) return false;
-    DevFilaSwitch* filaSwitch = obj->GetFilaSwitch();
-    return filaSwitch && filaSwitch->IsInstalled();
+    return obj->IsFilaSwitchInstalled();
 }
 
 std::tuple<bool, bool> AMSControl::isFilaSwitchReady() const
@@ -839,11 +838,7 @@ std::tuple<bool, bool> AMSControl::isFilaSwitchReady() const
     if (!dev) return {false, false};
     MachineObject* obj = dev->get_selected_machine();
     if (!obj) return {false, false};
-    DevFilaSwitch* filaSwitch = obj->GetFilaSwitch();
-    if (filaSwitch) {
-        return {filaSwitch->IsInstalled(), filaSwitch->IsReady()};
-    }
-    return {false, false};
+    return {obj->IsFilaSwitchInstalled(), obj->IsFilaSwitchReady()};
 }
 
 void AMSControl::show_switcher_status(bool show)

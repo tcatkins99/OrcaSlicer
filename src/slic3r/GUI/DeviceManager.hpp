@@ -333,6 +333,8 @@ public:
 
     DevFilaSystem*   GetFilaSystem() const { return m_fila_system;}
     DevFilaSwitch*   GetFilaSwitch() const { return m_fila_switch;}
+    bool             IsFilaSwitchInstalled() const;
+    bool             IsFilaSwitchReady() const;
     bool             HasAms() const;
 
     DevLamp*         GetLamp() const { return m_lamp; }

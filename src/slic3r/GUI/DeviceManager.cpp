@@ -5573,6 +5573,16 @@ bool MachineObject::HasAms() const
     return m_fila_system->HasAms();
 }
 
+bool MachineObject::IsFilaSwitchInstalled() const
+{
+    return m_fila_switch && m_fila_switch->IsInstalled();
+}
+
+bool MachineObject::IsFilaSwitchReady() const
+{
+    return m_fila_switch && m_fila_switch->IsReady();
+}
+
 void change_the_opacity(wxColour& colour)
 {
     if (colour.Alpha() == 255) {

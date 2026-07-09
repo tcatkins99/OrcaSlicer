@@ -6,7 +6,6 @@
 #include "PartPlate.hpp"
 #include "Widgets/HyperLink.hpp"
 #include "DeviceCore/DevManager.h"
-#include "DeviceCore/DevFilaSwitch.h"
 #include "DeviceManager.hpp"
 
 namespace Slic3r { namespace GUI {
@@ -22,8 +21,7 @@ static bool is_fila_switch_ready()
     if (!dev_manager) return false;
     MachineObject* obj = dev_manager->get_selected_machine();
     if (!obj) return false;
-    DevFilaSwitch* fila_switch = obj->GetFilaSwitch();
-    return fila_switch && fila_switch->IsReady();
+    return obj->IsFilaSwitchReady();
 }
 
 static bool should_pop_up()
